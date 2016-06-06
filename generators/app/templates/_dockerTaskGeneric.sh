@@ -1,6 +1,6 @@
 imageName="<%= imageName %>"
+containerName="<%= imageName %>_<%= imageName %>_1"
 publicPort=<%= portNumber %>
-isWebProject=<%= isWebProject %>
 
 # Kills all running containers of an image and then removes them.
 cleanAll () {
@@ -36,6 +36,10 @@ compose () {
   if [[ ! -f $composeFileName ]]; then
     echo "$ENVIRONMENT is not a valid parameter. File '$composeFileName' does not exist."
   else
+    if [[ "$RemoteDebugging" -eq 1 ]]; then
+        export REMOTE_DEBUGGING="1"
+    fi
+
     echo "Running compose file $composeFileName"
     docker-compose -f $composeFileName kill
 
@@ -43,28 +47,53 @@ compose () {
       docker-compose -f $composeFileName build
     fi
 
-    docker-compose -f $composeFileName up -d
+    docker-compose -f $composeFileName up -d --build<% if (isWebProject) { %>
 
-    if [[ $isWebProject = true ]]; then
-      openSite
-    fi
+    if [[ "$RemoteDebugging" -ne 1 ]]; then
+        openSite
+    fi<% } %>
   fi
-}
+}<% if (projectType === 'aspnet') { %>
+
+debug () {
+    url="http://localhost:$publicPort"
+    if [[ ! -z $MachineName ]]; then
+        url="http://$(docker-machine ip $MachineName):$publicPort"
+    fi
+    echo  "Running on $url"
+    
+    containerId=$(docker ps -f "name=$containerName" -q -n=1)
+    if [[ -z containerId ]]; then
+        echo "Could not find a contianer nammed $containerName"
+    else
+        eval "docker exec -i $containerId $Command"
+    fi
+}<% } %><% if (isWebProject) { %>
 
 openSite () {
+    url="http://localhost:$publicPort"
+    if [[ ! -z $MachineName ]]; then
+        url="http://$(docker-machine ip $MachineName):$publicPort"
+    fi
     printf 'Opening site'
-    until $(curl --output /dev/null --silent --head --fail http://$(docker-machine ip $(docker-machine active)):$publicPort); do
+    until $(curl --output /dev/null --silent --head --fail $url); do
       printf '.'
       sleep 1
     done
 
     # Open the site.
-    open "http://$(docker-machine ip $(docker-machine active)):$publicPort"
+    open $url
+}<% } %>
+
+setMachine() {
+    if [[ ! -z $MachineName ]]; then
+        eval $(docker-machine env $MachineName)
+    fi
 }
 
 # Shows the usage for the script.
 showUsage () {
-    echo "Usage: dockerTask.sh [COMMAND] (ENVIRONMENT)"
+    echo "Usage: dockerTask.sh [COMMAND] (ENVIRONMENT) (MachineName)"
     echo "    Runs build or compose using specific environment (if not provided, debug environment is used)"
     echo ""
     echo "Commands:"
@@ -76,11 +105,14 @@ showUsage () {
     echo "    debug: Uses debug environment for build and/or compose."
     echo "    release: Uses release environment for build and/or compose."
     echo ""
+    echo "MachineName:"
+    echo "    Name of the docker-machine to use. Do not provide or use '' to not run docker-machine"
+    echo ""
     echo "Example:"
-    echo "    ./dockerTask.sh build debug"
+    echo "    ./dockerTask.sh build debug Default"
     echo ""
     echo "    This will:"
-    echo "        Build a Docker image named $imageName using debug environment."
+    echo "        Build a Docker image named $imageName using debug environment running against the machine default."
 }
 
 if [ $# -eq 0 ]; then
@@ -89,13 +121,28 @@ else
   case "$1" in
       "compose")
              ENVIRONMENT=$2
+             MachineName=$3
+             RemoteDebugging=$4
+             setMachine
              compose
              ;;
       "build")
              ENVIRONMENT=$2
+             MachineName=$3
+             setMachine
              buildImage
              ;;
+      "debug")
+             MachineName=$2
+             # Passing anything from the second argument onward to the command.
+             shift 2
+             Command=$@
+             setMachine
+             debug
+             ;;
       "clean")
+             MachineName=$2
+             setMachine
              cleanAll
              ;;
       *)

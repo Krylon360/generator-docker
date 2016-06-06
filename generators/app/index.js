@@ -25,6 +25,7 @@ var error = false;
 // Docker variables
 var portNumber = 3000;
 var imageName = '';
+var projectName = '';
 var DOCKERIGNORE_NAME = '.dockerignore';
 var DEBUG_DOCKERFILE_NAME = 'Dockerfile.debug';
 var DEBUG_DOCKERCOMPOSE_NAME = 'docker-compose.debug.yml';
@@ -110,6 +111,7 @@ function showPrompts() {
         imageName = props.imageName;
         isGoWeb = props.isGoWeb;
         baseImageName = props.baseImageName;
+        projectName = process.cwd().split(path.sep).pop().toLowerCase().replace('[^a-zA-Z0-9]', '');
         done();
     }.bind(this));
 }
@@ -125,6 +127,7 @@ function handleNodeJs(yo) {
     }
 
     var templateData = {
+            projectType: projectType,
             imageName: imageName,
             portNumber: portNumber,
             isWebProject: true,
@@ -141,6 +144,7 @@ function handleGolang(yo) {
     var golang = new GolangHelper();
 
     var templateData = {
+            projectType: projectType,
             imageName: imageName,
             projectName: golang.getProjectName(),
             portNumber: portNumber,
@@ -169,6 +173,8 @@ function handleAspNet(yo) {
     }.bind(yo));
 
     var templateData = {
+            projectType: projectType,
+            projectName: projectName,
             baseImageName: aspNet.getDockerImageName(),
             imageName: imageName,
             portNumber: portNumber,
@@ -178,6 +184,18 @@ function handleAspNet(yo) {
 
     var dockerignoreFileContents = aspNet.createDockerignoreFile();
     yo.fs.write(yo.destinationPath(DOCKERIGNORE_NAME), new Buffer(dockerignoreFileContents));
+
+    if (baseImageName === 'dotnet:1.0.0-preview1' ) {
+        yo.fs.copyTpl(
+            yo.templatePath('tasks.json'),
+            yo.destinationPath('.vscode/tasks.json'),
+            templateData);
+
+        yo.fs.copyTpl(
+            yo.templatePath('dotnet/launch.json'),
+            yo.destinationPath('.vscode/launch.json'),
+            templateData);
+    }
 
     handleCommmonTemplates(yo, aspNet, templateData);
 }
@@ -215,8 +233,13 @@ function handleCommmonTemplates(yo, helper, templateData) {
         releaseTemplateData);
 
     yo.fs.copyTpl(
-        yo.templatePath(helper.getTemplateScriptName()),
-        yo.destinationPath(util.getDestinationScriptName()),
+        yo.templatePath('_dockerTaskGeneric.ps1'),
+        yo.destinationPath('dockerTask.ps1'),
+        templateData);
+
+    yo.fs.copyTpl(
+        yo.templatePath('_dockerTaskGeneric.sh'),
+        yo.destinationPath('dockerTask.sh'),
         templateData);
 }
 

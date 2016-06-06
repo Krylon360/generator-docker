@@ -1,0 +1,67 @@
+{
+    // See https://go.microsoft.com/fwlink/?LinkId=733558
+    // for the documentation about the tasks.json format
+    "version": "0.1.0",
+    "windows": {
+        "command": "powershell",
+        "options": {
+            "cwd": "<%- '${workspaceRoot}' %>"
+        },
+        "tasks": [
+            {
+                "taskName": "build",
+                "suppressTaskName": true,
+                "args": [".\\dockerTask.ps1", "-Build", "-Environment", "Debug", "-Machine", "Default" ],
+                "isBuildCommand": true,
+                "showOutput": "always",
+                "echoCommand": true
+                
+            },
+            {
+                "taskName": "compose",
+                "suppressTaskName": true,
+                "args": [".\\dockerTask.ps1", "-Compose", "-Environment", "Debug", "-Machine", "Default" ],
+                "isBuildCommand": false,
+                "showOutput": "always",
+                "echoCommand": true
+            }<% if (projectType === 'aspnet') { %>,
+            {
+                "taskName": "composeForDebug",
+                "suppressTaskName": true,
+                "args": [".\\dockerTask.ps1", "-Compose", "-Environment", "Debug", "-Machine", "Default", "-RemoteDebugging", "$True" ],
+                "isBuildCommand": false,
+                "showOutput": "always",
+                "echoCommand": true
+            }<% } %>
+        ]
+    },
+    "osx": {
+        "command": "/bin/bash",
+        "options": {
+            "cwd": "<%- '${workspaceRoot}' %>"
+        },
+        "tasks": [
+            {
+                "taskName": "build",
+                "suppressTaskName": true,
+                "args": [ "-c", "./dockerTask.sh build debug Default" ],
+                "isBuildCommand": true,
+                "showOutput": "always"
+            },
+            {
+                "taskName": "compose",
+                "suppressTaskName": true,
+                "args": [ "-c", "./dockerTask.sh compose debug Default" ],
+                "isBuildCommand": false,
+                "showOutput": "always"
+            }<% if (projectType === 'aspnet') { %>,
+            {
+                "taskName": "composeForDebug",
+                "suppressTaskName": true,
+                "args": [ "-c", "./dockerTask.sh compose debug Default 1" ],
+                "isBuildCommand": false,
+                "showOutput": "always"
+            }<% } %>
+        ]
+    }
+}

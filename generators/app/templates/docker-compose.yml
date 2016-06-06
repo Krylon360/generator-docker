@@ -4,6 +4,8 @@
   ports:
     - "<%= portNumber %>:<%= portNumber %>"<% } %><% if (environment === 'debug' && volumeMap !== null) { %>
   volumes:
-    - <%= volumeMap %><% } %>
+    - <%= volumeMap %><% } %><% if (environment === 'debug' && projectType === 'aspnet') { %>
+  environment:
+    - REMOTE_DEBUGGING<% } %>
   labels:
     com.<%= imageName %>.environment: "<%= environment %>"
