@@ -1,5 +1,5 @@
 imageName="<%= imageName %>"<% if (projectType === 'aspnet') { %>
-containerName="<%= projectName %>_<%= imageName %>_1"<% } >
+containerName="<%= projectName %>_<%= imageName %>_1"<% } %>
 publicPort=<%= portNumber %>
 
 # Kills all running containers of an image and then removes them.
